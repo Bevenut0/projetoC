@@ -1,64 +1,115 @@
+// Bibliotecas
 #include <stdio.h> 
+#include <string.h>
 
-// Definição de constantes do sistema
+// Defines
 #define MAX_ENCOMENDAS 100
 #define META_FATURAMENTO 1000.00
 
-// ==========================================
+// Struct
+typedef struct {
+    int id;                      // ID unico da encomenda
+    int categoria;              // Categoria
+    int cupom;                 // Codigo do cupom 
+    float peso;               // Peso em kg
+    float distancia;         // Distancia
+    float valor_bruto;      // Valor do frete sem descontos
+    float valor_final;     // Valor cobrado do cliente 
+    char status[15];      // Status da encomenda 
+} Encomenda;
+Encomenda encomendas[MAX_ENCOMENDAS]; //ponteiro
+
+// =========================================================================================================================================================
 // VARIÁVEIS GLOBAIS
 // Acumulam dados ao longo da execução do programa
-// ==========================================
-int total_encomendas = 0;   // Contador de encomendas registradas
-float faturamento_total = 0.0; // Soma do valor total arrecadado
-float soma_peso = 0.0;        // Soma dos pesos para calcular a média
-float soma_distancia = 0.0;   // Soma das distâncias para calcular a média
+// ========================================================================================================================================================
 
-float maior_frete = 0.0; // Guarda o maior valor de frete calculado
-float menor_frete = 0.0; // Guarda o menor valor de frete calculado
+int verificar_frete_gratis(int categoria, float peso, float distancia);      // Verificação se avera ou não frete gratis
+int total_encomendas = 0;                                                   // Contador de encomendas registradas
+int qtd_padrao = 0;                                                        // Quantidade de encomendas da categoria Padrão
+int qtd_expressa = 0;                                                     // Quantidade de encomendas da categoria Expressa
+int qtd_prioritaria = 0;                                                 // Quantidade de encomendas da categoria Prioritária
+int qtd_isencoes = 0;                                                   // Quantidade de encomendas com frete grátis
+int solicitar_cupom();                                                 // Solicitação do cupom 
+float faturamento_total = 0.0;                                        // Soma do valor total arrecadado
+float soma_peso = 0.0;                                               // Soma dos pesos para calcular a média
+float soma_distancia = 0.0;                                         // Soma das distâncias para calcular a média
+float maior_frete = 0.0;                                           // Guarda o maior valor de frete calculado
+float menor_frete = 0.0;                                          // Guarda o menor valor de frete calculado
+float calcular_taxa_peso(float peso);                            // Calcular taxa de peso
 
-int qtd_padrao = 0;      // Quantidade de encomendas da categoria Padrão
-int qtd_expressa = 0;     // Quantidade de encomendas da categoria Expressa
-int qtd_prioritaria = 0;  // Quantidade de encomendas da categoria Prioritária
-int qtd_isencoes = 0;     // Quantidade de encomendas com frete grátis
-
-// ==========================================
+// =========================================================================================================================================================
 // PROTÓTIPOS DAS FUNÇÕES
 // Declaração antecipada das funções do código
-// ==========================================
+// =========================================================================================================================================================
+
 void programa();
 void cadastro();
 void registro();
 void indicadores();
-
-int solicitar_cupom();
-float calcular_taxa_peso(float peso);
-int verificar_frete_gratis(int categoria, float peso, float distancia);
+void listar_encomendas();
+void buscar_por_id();
+void cancelar_encomenda();
+void exportar_relatorio();
+void limpar_historico();
 void processar_encomenda(int categoria, float peso, float distancia, int cupom);
+void salvar_arquivo();
+void carregar_arquivo();
 
 // Função principal de entrada da execução
 int main(int argc, char **argv)
 {
+    carregar_arquivo(); // carrega historico da memoria
     programa(); // Inicia o menu principal do programa
-    return 0;   // Retorna 0 indicando execução com sucesso
+    return 0;  // Retorna 0 indicando execução com sucesso
 }
 
-// ==========================================
+// Função para salvamento de arquivos para uso futuro
+void salvar_arquivo()
+{
+    FILE *arq = fopen("encomendas.txt", "w");
+    if (arq == NULL) {
+        printf("\nErro ao abrir arquivo para salvar!\n");
+        return;
+    }
+
+    for (int i = 0; i < total_encomendas; i++) {
+        fprintf(arq, "ID:%03d | TIPO:%d | PESO:%.2f | DIST:%.2f | CUPOM:%d | BRUTO:%.2f | FINAL:%.2f | STATUS:%s\n",
+                encomendas[i].id,
+                encomendas[i].categoria,
+                encomendas[i].peso,
+                encomendas[i].distancia,
+                encomendas[i].cupom,
+                encomendas[i].valor_bruto,
+                encomendas[i].valor_final,
+                encomendas[i].status);
+    }
+
+    fclose(arq);
+}
+
+// =========================================================================================================================================================
 // MENU PRINCIPAL DO SISTEMA
 // Usa um loop infinito para manter o sistema ativo
-// ==========================================
+// =========================================================================================================================================================
 void programa()
-{
+{ 
     int opcao; // Guarda a opção escolhida pelo usuário
 
     for (;;) // Loop infinito para reexibir o menu até o usuário escolher sair (opção 4)
     {
-        printf("======================================\n");
-        printf("LOGTECH LOGISTICS MENU\n");
-        printf("======================================\n");
-        printf("1-Cadastrar e Processar encomenda\n");
-        printf("2-Exibir Resumo Estatistico do dia\n");
-        printf("3-Exibir Indicadores\n");
-        printf("4-Sair\n");
+        printf("=====================================================\n");
+        printf("LOGTECH SGEF - VERSAO 2.0\n");
+        printf("=====================================================\n");
+        printf("1-Cadastrar e Processar Encomenda\n");
+        printf("2-Listar Encomendas Registradas\n");
+        printf("3-Buscar Encomendas por ID\n");
+        printf("4-Cancelar Encomenda\n");
+        printf("5-Exibir Resumo Estatistico e Indicadores\n");
+        printf("6-Exportar Relatorio Diario (.txt)\n");
+        printf("7-Limpar/Reiniciar Historico do Dia\n");
+        printf("8-Sair\n");
+        printf("=====================================================\n");
         printf("Escolha uma opcao: ");
         
         // Se a leitura do scanf falhar (usuário digitou texto em vez de número)
@@ -72,37 +123,53 @@ void programa()
         switch (opcao)
         {
         case 1:
-            // Verifica se o limite máximo de encomendas diárias foi atingido
             if (total_encomendas >= MAX_ENCOMENDAS) {
                 printf("\nLimite maximo de 100 encomendas atingido para hoje!\n\n");
             } else {
-                cadastro(); // Chama a função para cadastrar pacote
+                cadastro(); 
             }
             break;
 
         case 2:
-            registro(); // Exibe estatísticas gerais
+            listar_encomendas();
             break;
 
         case 3:
-            indicadores(); // Exibe metas e contadores operacionais
+            buscar_por_id();
             break;
 
         case 4:
+            cancelar_encomenda();
+            break;
+
+        case 5:
+            registro();    
+            indicadores(); 
+            break;
+
+        case 6:
+            exportar_relatorio();
+            break;
+
+        case 7:
+            limpar_historico();
+            break;
+
+        case 8:
             printf("\nSaindo do Sistema...\n");
-            return; // Encerra a função programa() e finaliza o sistema
+            return; 
 
         default:
-            printf("\nOpcao Invalida!\n\n"); // Caso o número não seja de 1 a 4
+            printf("\nOpcao Invalida!\n\n");
             break;
         }
     }
 }
 
-// ==========================================
+// ========================================================================================================================================================
 // CADASTRO E VALIDAÇÃO DE DADOS
 // Lê as informações do pacote e garante dados válidos
-// ==========================================
+// ========================================================================================================================================================
 void cadastro()
 {
     int categoria = 0;
@@ -153,7 +220,7 @@ void cadastro()
         printf("Teve cupom? (S/N): ");
         scanf(" %c", &tem_cupom);
         if (tem_cupom != 'S' && tem_cupom != 's' && tem_cupom != 'N' && tem_cupom != 'n') {
-            printf("Opcao invalida! Digite S para Sim ou N para Nao.\n");
+            printf("Opção invalida! Digite S para Sim ou N para Nao.\n");
         }
     } while (tem_cupom != 'S' && tem_cupom != 's' && tem_cupom != 'N' && tem_cupom != 'n');
 
@@ -166,9 +233,9 @@ void cadastro()
     processar_encomenda(categoria, peso, distancia, codigo_cupom);
 }
 
-// ==========================================
+// ========================================================================================================================================================
 // SOLICITAÇÃO E VALIDAÇÃO DE CUPOM
-// ==========================================
+// ========================================================================================================================================================
 int solicitar_cupom()
 {
     int cupom = 0;
@@ -188,9 +255,9 @@ int solicitar_cupom()
     }
 }
 
-// ==========================================
+// ========================================================================================================================================================
 // CÁLCULO DA TAXA BASE POR PESO
-// ==========================================
+// ========================================================================================================================================================
 float calcular_taxa_peso(float peso)
 {
     if (peso <= 5.0) {
@@ -200,10 +267,10 @@ float calcular_taxa_peso(float peso)
     }
 }
 
-// ==========================================
+// ========================================================================================================================================================
 // REGRA DE ISENÇÃO (FRETE GRÁTIS)
 // Retorna 1 para verdadeiro e 0 para falso
-// ==========================================
+// ========================================================================================================================================================
 int verificar_frete_gratis(int categoria, float peso, float distancia)
 {
     // Regra: Categoria Padrão (1) + até 2kg + até 10km recebe frete grátis
@@ -214,10 +281,10 @@ int verificar_frete_gratis(int categoria, float peso, float distancia)
     }
 }
 
-// ==========================================
+// ========================================================================================================================================================
 // PROCESSAMENTO DA ENCOMENDA E IMPRESSÃO
 // Realiza os cálculos do frete e atualiza as globais
-// ==========================================
+// ========================================================================================================================================================
 void processar_encomenda(int categoria, float peso, float distancia, int cupom)
 {
     float multiplicador_dist = 0.0;
@@ -282,6 +349,20 @@ void processar_encomenda(int categoria, float peso, float distancia, int cupom)
         if (valor_final < menor_frete) menor_frete = valor_final;
     }
 
+    // Guarda a encomenda no vetor da struct
+    int idx = total_encomendas - 1;
+    encomendas[idx].id = total_encomendas;
+    encomendas[idx].categoria = categoria;
+    encomendas[idx].peso = peso;
+    encomendas[idx].distancia = distancia;
+    encomendas[idx].cupom = cupom;
+    encomendas[idx].valor_bruto = frete_bruto;
+    encomendas[idx].valor_final = valor_final;
+    strcpy(encomendas[idx].status, "ATIVA");
+
+    // Salva a alteracao no arquivo
+    salvar_arquivo();
+
     // Exibição do comprovante na tela
     printf("\n===========================================================\n");
     printf("               LOGTECH - COMPROVANTE DE FRETE              \n");
@@ -312,17 +393,17 @@ void processar_encomenda(int categoria, float peso, float distancia, int cupom)
         printf("Cupom Aplicado           : Nenhum\n");
     }
 
-    printf("-----------------------------------------------------------\n");
     printf("Valor Bruto do Frete     : R$ %.2f\n", frete_bruto);
     printf("Valor Final Calculado    : R$ %.2f\n", valor_final);
-    printf("Status                   : Processado com Sucesso\n");
+    printf("Status                   : ATIVA\n");
     printf("===========================================================\n\n");
+
 }
 
-// ==========================================
+// ========================================================================================================================================================
 // RELATÓRIO: RESUMO ESTATÍSTICO DO DIA
 // Exibe os totais e médias calculadas
-// ==========================================
+// ========================================================================================================================================================
 void registro()
 {
     // Validação caso nenhuma encomenda tenha sido processada ainda
@@ -336,23 +417,28 @@ void registro()
     float media_distancia = soma_distancia / total_encomendas;
 
     printf("\n=========================================\n");
-    printf("     RESUMO FINANCEIRO E OPERACIONAL     \n");
-    printf("=========================================\n");
-    printf("Total de encomendas processadas : %d\n", total_encomendas);
-    printf("Faturamento total em fretes     : R$ %.2f\n", faturamento_total);
-    printf("Media de peso das encomendas    : %.2f kg\n", media_peso);
-    printf("Media de distancia percorrida   : %.2f km\n", media_distancia);
+    printf("     LOGTECH SGEF - VERSAO 2.0     \n");
+    
+    printf("===========================================\n");
+    printf("Data da Exportaçao              : ");
+    printf("Total de Encomendas Processadas : %d\n", total_encomendas);
+    printf("Total de Encomendas Ativas      : %d\n");
+    printf("Total de Encomendas Canceladas  : %d\n");
+     printf("-----------------------------------------\n");
+    printf("Faturamento Total em Fretes     : R$ %.2f\n", faturamento_total);
+    printf("Media de peso (Encomendas Ativas)    : %.2f kg\n", media_peso);
+    printf("Media de distancia (Ativas)  : %.2f km\n", media_distancia);
     printf("-----------------------------------------\n");
-    printf("Maior frete individual cobrado : R$ %.2f\n", maior_frete);
-    printf("Menor frete individual cobrado : R$ %.2f\n", menor_frete);
+    printf("Maior frete individual cobrado  : R$ %.2f\n", maior_frete);
+    printf("Menor frete individual cobrado  : R$ %.2f\n", menor_frete);
     printf("Total de isencoes (Frete Gratis): %d encomendas\n", qtd_isencoes);
-    printf("=========================================\n\n");
+    printf("=========================================\n");
 }
 
-// ==========================================
+// ========================================================================================================================================================
 // RELATÓRIO: INDICADORES E ALERTAS
 // Exibe verificação de meta de faturamento e categorias
-// ==========================================
+// ========================================================================================================================================================
 void indicadores()
 {
     // Validação caso não haja cadastro
