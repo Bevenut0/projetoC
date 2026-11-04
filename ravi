@@ -653,4 +653,64 @@ void exportar_relatorio()
     float taxa_is = (ativas > 0) ? (((float)qtd_isencoes / ativas) * 100.0) : 0.0;
 
     fprintf(rel, "=========================================\n");
-    fprintf(
+    fprintf(rel, "     LOGTECH LOGISTICS - RELATORIO DIARIO\n");
+    fprintf(rel, "=========================================\n");
+    fprintf(rel, "Data da Exportacao              : %s\n", data_str);
+    fprintf(rel, "Total de Encomendas Processadas : %d\n", total_encomendas);
+    fprintf(rel, "Total de Encomendas Ativas      : %d\n", ativas);
+    fprintf(rel, "Total de Encomendas Canceladas  : %d\n", total_encomendas - ativas);
+    fprintf(rel, "-----------------------------------------\n");
+    fprintf(rel, "Faturamento Total em Fretes     : R$ %.2f\n", faturamento_total);
+    fprintf(rel, "Media de Peso (Encomendas Ativas): %.2f kg\n", media_p);
+    fprintf(rel, "Media de Distancia (Ativas)     : %.2f km\n", media_d);
+    fprintf(rel, "-----------------------------------------\n");
+    fprintf(rel, "Maior Frete Individual Cobrado  : R$ %.2f\n", maior_frete);
+    fprintf(rel, "Menor Frete Individual Cobrado  : R$ %.2f\n", menor_frete);
+    fprintf(rel, "Total de Isencoes (Frete Gratis): %d encomenda(s)\n", qtd_isencoes);
+    fprintf(rel, "-----------------------------------------\n");
+    fprintf(rel, "   INDICADORES E ALERTAS OPERACIONAIS    \n");
+    fprintf(rel, "-----------------------------------------\n");
+    
+    if (faturamento_total >= META_FATURAMENTO) {
+        fprintf(rel, "Meta de Faturamento (R$ 1000.00): R$ %.2f (META ATINGIDA!)\n", faturamento_total);
+    } else {
+        fprintf(rel, "Meta de Faturamento (R$ 1000.00): R$ %.2f (Faltam R$ %.2f)\n", faturamento_total, META_FATURAMENTO - faturamento_total);
+    }
+
+    fprintf(rel, "Categoria mais utilizada no dia : ");
+    if (qtd_padrao >= qtd_expressa && qtd_padrao >= qtd_prioritaria) {
+        fprintf(rel, "Padrao\n");
+    } else if (qtd_expressa >= qtd_padrao && qtd_expressa >= qtd_prioritaria) {
+        fprintf(rel, "Expressa\n");
+    } else {
+        fprintf(rel, "Prioritaria\n");
+    }
+
+    fprintf(rel, "Taxa de Entregas com Frete Gratis: %.1f %%\n", taxa_is);
+    fprintf(rel, "=========================================\n");
+
+    fclose(rel);
+    printf("\nRelatorio salvo com sucesso em 'relatorio_diario.txt'!\n\n");
+}
+
+// Opcao nuclear: Zera o estado do array na memoria e limpa o arquivo físico
+void limpar_historico()
+{
+    char confirmacao;
+    printf("\nDeseja realmente apagar todo o historico acumulado? (S/N): ");
+    scanf(" %c", &confirmacao);
+
+    if (confirmacao == 'S' || confirmacao == 's') {
+        total_encomendas = 0;
+        recalcular_globais(); // Zera todos os totais
+
+        FILE *arq = fopen("encomendas.txt", "w");
+        if (arq != NULL) {
+            fclose(arq); // Abre em w e ja fecha, o que esvazia o arquivo
+        }
+
+        printf("\nHistorico do dia limpo com sucesso!\n\n");
+    } else {
+        printf("\nOperacao cancelada.\n\n");
+    }
+}
