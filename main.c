@@ -145,14 +145,16 @@ void carregar_arquivo()
 
     total_encomendas = 0;
 
-    while (!feof(arq) && total_encomendas < MAX_ENCOMENDAS) {
+    while (total_encomendas < MAX_ENCOMENDAS) {
         typeOfencomenda e;
-        int lidos = fscanf(arq, "ID:%d | TIPO:%d | PESO:%f | DIST:%f | CUPOM:%d | BRUTO:%f | FINAL:%f | STATUS:%s\n",
+        int lidos = fscanf(arq, "ID:%d | TIPO:%d | PESO:%f | DIST:%f | CUPOM:%d | BRUTO:%f | FINAL:%f | STATUS:%14s\n",
                            &e.id, &e.categoria, &e.peso, &e.distancia, &e.cupom, &e.valor_bruto, &e.valor_final, e.status);
         
         if (lidos == 8) {
             encomendas[total_encomendas] = e;
             total_encomendas++;
+        } else {
+            break;
         }
     }
 
@@ -242,6 +244,7 @@ void cadastro()
 {
     char tem_cupom = 'N';
     int codigo_cupom = 0;
+    encomendas[pacote_atual].cupom = 0;
 
     printf("\n======================================\n CADASTRAR PACOTE \n======================================\n");
 
@@ -609,7 +612,10 @@ void exportar_relatorio()
 
     char data_str[15];
     printf("\nDigite a data de hoje (ex: 15/10/2026): ");
-    scanf("%s", data_str);
+    if (scanf("%14s", data_str) != 1) {
+        printf("\nData invalida!\n\n");
+        return;
+    }
 
     FILE *rel = fopen("relatorio_diario.txt", "w");
     if (rel == NULL) {
